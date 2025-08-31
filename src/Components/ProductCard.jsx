@@ -15,6 +15,7 @@ function ProductCard({ product, onClick }) {
       {/* Product Info */}
       <div className="flex flex-col flex-grow">
         <h2 className="font-bold mt-2">{product.title}</h2>
+        <p className="text-gray-700 mb-2">{product.description}</p>
         <p className="text-gray-600 mb-2">Rs.{product.price}</p>
       </div>
 
