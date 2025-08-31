@@ -12,6 +12,9 @@ function ProductListPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+
   useEffect(() => {
     fetchProducts();
     fetchCategories();
@@ -20,6 +23,7 @@ function ProductListPage() {
   const fetchProducts = async () => {
     try {
       const res = await api.get("/products");
+      console.log("Products API response:", res.data);
       setProducts(res.data.products || []);
     } catch (err) {
       console.error("Error fetching products:", err);
@@ -52,10 +56,33 @@ function ProductListPage() {
     }
   };
 
-  const getCategoryName = (id) => {
-    const cat = categories.find((c) => c._id === id);
+  const getCategoryName = (category) => {
+    if (!category) return "Unknown";
+    const categoryId = typeof category === "string" ? category : category?._id;
+    const cat = categories.find((c) => c._id === categoryId);
     return cat ? cat.name : "Unknown";
   };
+
+  // Filter products safely
+  const filteredProducts = products.filter((p) => {
+    // Search filter: using title
+    const productTitle = p.title ? p.title.toString().trim().toLowerCase() : "";
+    const query = searchQuery.trim().toLowerCase();
+    const matchesSearch = !query || productTitle.includes(query);
+
+    // Category filter
+    let matchesCategory = true;
+    if (selectedCategory) {
+      const productCategoryId = p.category
+        ? typeof p.category === "string"
+          ? p.category
+          : p.category._id
+        : null;
+      matchesCategory = productCategoryId === selectedCategory;
+    }
+
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="max-w-6xl mx-auto p-4">
@@ -69,14 +96,44 @@ function ProductListPage() {
         </Link>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <input
+          type="text"
+          placeholder="Search by product title..."
+          className="border p-2 rounded flex-1"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+
+        <select
+          className="border p-2 rounded"
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {categories.map((cat) => (
+            <option key={cat._id} value={cat._id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {products.map((p) => (
-          <ProductCard
-            key={p._id}
-            product={{ ...p, onDelete: requestDelete }}
-            onClick={() => setSelected(p)}
-          />
-        ))}
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map((p) => (
+            <ProductCard
+              key={p._id}
+              product={{ ...p, onDelete: requestDelete }}
+              onClick={() => setSelected(p)}
+            />
+          ))
+        ) : (
+          <p className="col-span-full text-center text-gray-500 mt-4">
+            No products found.
+          </p>
+        )}
       </div>
 
       {selected && (

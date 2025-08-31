@@ -8,9 +8,10 @@ function AddProductPage() {
     title: "",
     price: "",
     description: "",
-    category: "", // will store categoryId
+    categoryId: "", // backend expects categoryId
     imageURL: "",
   });
+
   const [categories, setCategories] = useState([]);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
@@ -20,8 +21,10 @@ function AddProductPage() {
     const fetchCategories = async () => {
       try {
         const res = await api.get("/category/all");
-        if (res.data.success) {
+        if (res.data.success && Array.isArray(res.data.categories)) {
           setCategories(res.data.categories);
+        } else {
+          console.error("No categories returned from API");
         }
       } catch (err) {
         console.error("Error fetching categories:", err);
@@ -30,43 +33,50 @@ function AddProductPage() {
     fetchCategories();
   }, []);
 
-  const handleChange = (e) =>
+  const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage(null);
-    setError(null);
+  e.preventDefault();
+  setMessage(null);
+  setError(null);
 
-    try {
-      await api.post("/product/add", form);
-      setMessage("✅ Product added successfully! Redirecting...");
-      setTimeout(() => navigate("/products"), 3000);
-    } catch (err) {
-      const msg =
-        err.response?.data?.message || "❌ Failed to add product. Try again.";
-      setError(msg);
-    }
-  };
+  try {
+    const payload = {
+      title: form.title.trim(),
+      price: Number(form.price),
+      description: form.description.trim(),
+      categoryId: form.categoryId,
+      imageURL: form.imageURL.trim(),
+    };
+
+    console.log("Submitting product:", payload); // check payload
+
+    await api.post("/product/add", payload);
+    setMessage("✅ Product added successfully! Redirecting...");
+    setTimeout(() => navigate("/products"), 3000);
+  } catch (err) {
+    const msg =
+      err.response?.data?.message || err.message || "❌ Failed to add product.";
+    setError(msg);
+    console.error("Add product error:", err);
+  }
+};
+
 
   return (
     <div className="max-w-md mx-auto mt-6">
       <h1 className="text-xl font-bold mb-4">Add Product</h1>
 
-      {/* Success / Error Messages */}
       {message && (
-        <div className="mb-3 p-2 text-green-700 bg-green-100 rounded">
-          {message}
-        </div>
+        <div className="mb-3 p-2 text-green-700 bg-green-100 rounded">{message}</div>
       )}
       {error && (
-        <div className="mb-3 p-2 text-red-700 bg-red-100 rounded">
-          {error}
-        </div>
+        <div className="mb-3 p-2 text-red-700 bg-red-100 rounded">{error}</div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Title */}
         <input
           type="text"
           name="title"
@@ -77,7 +87,6 @@ function AddProductPage() {
           required
         />
 
-        {/* Price */}
         <input
           type="number"
           name="price"
@@ -88,7 +97,6 @@ function AddProductPage() {
           required
         />
 
-        {/* Description */}
         <input
           type="text"
           name="description"
@@ -99,10 +107,9 @@ function AddProductPage() {
           required
         />
 
-        {/* Category Dropdown */}
         <select
-          name="category"
-          value={form.category}
+          name="categoryId"
+          value={form.categoryId}
           onChange={handleChange}
           className="w-full border p-2 rounded"
           required
@@ -115,7 +122,6 @@ function AddProductPage() {
           ))}
         </select>
 
-        {/* Image URL */}
         <input
           type="text"
           name="imageURL"
@@ -130,7 +136,7 @@ function AddProductPage() {
           type="submit"
           className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
         >
-          Add
+          Add Product
         </button>
       </form>
     </div>
